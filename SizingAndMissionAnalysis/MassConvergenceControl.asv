@@ -1,0 +1,345 @@
+
+
+
+
+
+
+if MassIter==1
+    OldExcessEnergyMass_kg = 0;
+    
+    
+    % calculate the energy use
+    EnergyUse = History.Energy(1,:) - History.Energy(end,:);
+    
+    % calculate the energy utilization ratio
+    EnergyUseRatio = (History.Energy(1,:) - History.Energy(end,:))/sum(History.Energy(1,:)-History.Energy(end,:));
+    
+    % calculate available energy mass (after subtracting any min energy mass)
+    AvailableEnergyMass = Vehicle.MassProp.MTOM_kg - Vehicle.MassProp.Payload_kg - Vehicle.MassProp.OEM_kg - sum(Vehicle.Propulsion.MinEnergyMass_kg);
+    
+    % convert to equivalent energy following energy utilization ratio
+    AvailableStartEnergy = AvailableEnergyMass * EnergyUseRatio.*Vehicle.SOTA.EnergyDensity_MJkg;
+        
+    % adjust energy masses (add back any minimum energy masses)
+    Vehicle.MassProp.EnergyMass_kg = AvailableEnergyMass * EnergyUseRatio + Vehicle.Propulsion.MinEnergyMass_kg;
+    
+    
+    % adjust energy history
+    History.Energy = History.Energy - History.Energy(1,:) + Vehicle.MassProp.EnergyMass_kg.*Vehicle.SOTA.EnergyDensity_MJkg;
+    
+    % set a start value of growth factor
+    GrowthFactor = 1;
+    
+end
+
+% % calculate the required reserve energy based on start energy and
+% % the required reserve energy fraction
+
+for i = 1:Mission.PropTypes
+    
+    % if reserve energy is specified as %-age of start energy
+    if strcmpi(Mission.ResEnergyType{i},'start')
+        EnergyUsed = History.Energy(1,i)-History.Energy(end,i);
+        FinalToUsedRatio = (Mission.ResEnergyPerc(i)/100)/(1-Mission.ResEnergyPerc(i)/100);
+        RequiredReserveEnergy(i) = FinalToUsedRatio* (History.Energy(1,i)-History.Energy(end,i));
+    end
+    
+    % if reserve energy is specified as %-age of consumed energy
+    if strcmpi(Mission.ResEnergyType{i},'used')
+        RequiredReserveEnergy(i) = (Mission.ResEnergyPerc(i)/100) * (History.Energy(1,i)-History.Energy(end,i));
+    end
+    
+end
+
+% capture current energy masses
+EnergyMassesCaptured = Vehicle.MassProp.EnergyMass_kg;
+
+% calculate the actual reserve energy left at end-of-mission
+ActualReserveEnergy = History.Energy(end,:);
+
+% How much excess energy is left at end-of-mission (after
+% satisfying end-of-mission reserve energy requirements)?
+% Note: a negative number means energy deficit
+EnergyExcess_MJ = ActualReserveEnergy - RequiredReserveEnergy;
+
+% What is the mass equivalent of the energy excess for each energy
+% source? Computed based on the energy densities
+DeltaEnergyMass_kg = EnergyExcess_MJ ./Vehicle.SOTA.EnergyDensity_MJkg;
+
+% Test what new energy masses would result if applied
+EnergyMass_kg_test = EnergyMassesCaptured - DeltaEnergyMass_kg;
+
+% Get minimum energy mass
+MinEnergyMass_kg = Vehicle.Propulsion.MinEnergyMass_kg;
+
+% Do not permit reduction below min energy mass
+mev = EnergyMass_kg_test < MinEnergyMass_kg;
+
+% Adjust DeltaEnergyMass_kg to satisfy min energy mass
+DeltaEnergyMass_kg(mev) = - (MinEnergyMass_kg(mev) - EnergyMass_kg(mev));
+
+% DeltaEnergyMass_kg
+
+% Adjust energy mass to satisfy min energy mass
+EnergyMass_kg(mev) = MinEnergyMass_kg(mev);
+
+% what's the net mass equivalent of the excess energy? Obtained by
+% summing together the mass requivalents of individual excess
+% energies.
+ExcessEnergyMass_kg = sum(DeltaEnergyMass_kg);
+
+% Update the energy mass for the next iteration based on the delta
+% masses calculated above.
+% NOTE: During sizing, this just sets the ratio in which the
+% available energy mass is split by the sizer between the two
+% energy sources.
+
+EnergyMass_kg_test(EnergyMass_kg_test < MinEnergyMass_kg) = MinEnergyMass_kg(EnergyMass_kg_test < MinEnergyMass_kg);
+%
+Vehicle.MassProp.EnergyMass_kg = EnergyMass_kg_test;
+
+% check if energy masses have converged
+EnergyMassesConverged = all(abs(DeltaEnergyMass_kg)<MassConvergenceThreshold_kg);
+
+
+
+% calculate growth factor
+if MassIter>1
+    GrowthFactor = (Vehicle.MassProp.MTOM_kg - OldMTOM_kg)/(ExcessEnergyMass_kg - OldExcessEnergyMass_kg);
+    GrowthFactor = min(10, max(1.5, GrowthFactor));
+end
+
+
+
+if MassMethod == 1
+    
+    % current iteration MTOM
+    MTOM_kg = Vehicle.MassProp.MTOM_kg;
+    
+    % calculate current energy mass fraction (energy mass / MTOM)
+    emf = (Vehicle.MassProp.MTOM_kg - Vehicle.MassProp.Payload_kg - Vehicle.MassProp.OEM_kg)/Vehicle.MassProp.MTOM_kg;
+    
+    % assuming this emf holds, calulate new MTOM for next iteration
+    dMass_kg = - GrowthFactor *  ExcessEnergyMass_kg;
+
+    % verify whether mass convergence threshold has been met
+    %     if(abs(dMass_kg)<MassConvergenceThreshold_kg || abs(ExcessEnergyMass_kg) < MassConvergenceThreshold_kg)
+    if(EnergyMassesConverged)
+        MassConvergence = 1;
+        dMass_kg = 0;
+    else
+        % if not met, update MTOM for next iteration
+        Vehicle.MassProp.MTOM_kg = MTOM_kg + dMass_kg;
+    end
+    
+    
+end
+
+
+
+if(MassMethod == 2 || MassMethod == 3)
+    
+    
+    % current iteration MTOM
+    MTOM_kg = Vehicle.MassProp.MTOM_kg;
+    
+    % calculate current energy mass fraction (energy mass / MTOM)
+    emf = (Vehicle.MassProp.MTOM_kg - Vehicle.MassProp.Payload_kg - Vehicle.MassProp.OEM_kg)/Vehicle.MassProp.MTOM_kg;
+    emfvec(MassIter) = emf;
+    
+    % assuming this emf holds, calulate new MTOM for next iteration
+    dMTOM_emf = - ExcessEnergyMass_kg/emf;
+    
+    Trend(MassIter,1) = sign(ExcessEnergyMass_kg);
+    EEMVec(MassIter,1) = ExcessEnergyMass_kg;
+    
+    if MassIter == 1
+        MassConvergence = 0;
+        BracketFound = 0;
+        CheckForBracket = 1;
+        
+        RightBracket_EEM = [];
+        LeftBracket_EEM = [];
+    end
+    
+    if (MassIter>1&&CheckForBracket==1)
+        BracketFound = Trend(MassIter) ~= Trend(MassIter-1);
+        CheckForBracket = ~BracketFound;
+    end
+    
+    
+    % if bracket has not yet been found, increment the MTOM by the default
+    % amount in the appropriate direction
+    if BracketFound == 0
+        
+        if ExcessEnergyMass_kg > 0 % meaning, MTOM reduction needed
+            dMTOM_default = -dMTOM_maxdecrement * Vehicle.MassProp.MTOM_kg;
+        end
+        
+        if ExcessEnergyMass_kg < 0 % meaning, MTOM increase needed
+            dMTOM_default = dMTOM_maxincrement * Vehicle.MassProp.MTOM_kg;
+        end
+        
+        %dMass_kg =  dMTOM_default; %- sign(ExcessEnergyMass_kg) * max(abs(dMTOM_emf),abs(dMTOM_default));
+        dMass_kg =  - sign(ExcessEnergyMass_kg) * max(abs(ExcessEnergyMass_kg * GrowthFactor),abs(dMTOM_default));
+        
+            LeftBracket = min(MTOM_kg, MTOM_kg+dMass_kg);
+
+            RightBracket = max(MTOM_kg, MTOM_kg+dMass_kg);
+
+            LeftBracket_EEM(LeftBracket==MTOM_kg) = ExcessEnergyMass_kg;
+            RightBracket_EEM(RightBracket==MTOM_kg) = ExcessEnergyMass_kg;        
+        
+
+
+
+            Vehicle.MassProp.MTOM_kg = MTOM_kg + dMass_kg;
+
+
+
+    end
+    
+    
+    alpha = 0.5;
+    
+    
+    % if bracket has been found, apply bisection algorithm
+    if BracketFound == 1 && MassConvergence == 0
+        if ExcessEnergyMass_kg > 0
+            RightBracket = Vehicle.MassProp.MTOM_kg;
+            RightBracket_EEM = ExcessEnergyMass_kg;
+        end
+        if ExcessEnergyMass_kg < 0
+            LeftBracket = Vehicle.MassProp.MTOM_kg;
+            LeftBracket_EEM = ExcessEnergyMass_kg;
+        end
+        
+        % calculate interval
+        Interval = RightBracket - LeftBracket;
+        
+        % check if EMF has stabilized
+        EMFStabilized = abs(emfvec(MassIter) - emfvec(MassIter-1)) < Switchover_EMFTolerance;
+        TimeToSwitch = EMFStabilized || Interval < Switchover_MTOMInterval_kg;
+
+
+        if(~isempty(LeftBracket_EEM) &&~isempty(RightBracket_EEM) && TimeToSwitch && MassMethod == 3)
+            
+            % aim along the straight line joining the left and right
+            % brackets
+            alpha = - LeftBracket_EEM/(RightBracket_EEM - LeftBracket_EEM);
+            
+            % switch control over to method 1
+            MassMethod = 1;
+        end
+        
+        %         if(Interval <= 2*MassConvergenceThreshold_kg || abs(dMass_kg)<MassConvergenceThreshold_kg || abs(ExcessEnergyMass_kg) < MassConvergenceThreshold_kg)
+        if(EnergyMassesConverged)
+            MassConvergence = 1;
+            dMass_kg = 0;
+        else
+            
+            % set next iteration MTOM bisecting left and right brackets
+            Vehicle.MassProp.MTOM_kg = LeftBracket + alpha * (RightBracket - LeftBracket);
+            
+            dMass_kg = Vehicle.MassProp.MTOM_kg - MTOM_kg;
+            
+            
+        end
+        
+    end
+    
+    
+    %     Vehicle.MassProp.MTOM_kg
+    
+    
+    %     % assuming this emf holds, calulate new MTOM for next iteration
+    %     dMass_kg = - ExcessEnergyMass_kg/emf;
+    %
+    %     % verify whether mass convergence threshold has been met
+    %     if(abs(dMass_kg)<MassConvergenceThreshold_kg && abs(ExcessEnergyMass_kg) < MassConvergenceThreshold_kg)
+    %         MassConvergence = 1;
+    %     else
+    %         % if not met, update MTOM for next iteration
+    %         Vehicle.MassProp.MTOM_kg = MTOM_kg + dMass_kg;
+    %     end
+    
+    
+end
+
+
+% add current iteration data to iteration history
+Iterations.Iter(MassIter,1) = MassIter;
+Iterations.MTOM(MassIter,1) = MTOM_kg;
+Iterations.dMTOM(MassIter,1) = dMass_kg;
+Iterations.EEM(MassIter,1) = ExcessEnergyMass_kg;
+Iterations.GF(MassIter,1) = GrowthFactor;
+Iterations.emf(MassIter,1) = emf;
+Iterations.EnergyMasses(MassIter,:) = EnergyMassesCaptured;
+Iterations.dEnergyMasses(MassIter,:) = -DeltaEnergyMass_kg;
+Iterations.MassMethod(MassIter,1) = MassMethod;
+Iterations.Conv(MassIter,1) = MassConvergence;
+Iterations.Time(MassIter,1) = toc;
+
+
+
+
+
+
+
+
+OldExcessEnergyMass_kg = ExcessEnergyMass_kg;
+OldMTOM_kg = MTOM_kg;
+
+
+
+% older method
+
+% if MassMethod == 1
+%     %%%% PREPARE MTOM update for next iteration
+%     % current iteration MTOM
+%     MTOM_kg = Vehicle.MassProp.MTOM_kg;
+%
+%     % calculate current energy mass fraction (energy mass / MTOM)
+%     emf = (Vehicle.MassProp.MTOM_kg - Vehicle.MassProp.Payload_kg - Vehicle.MassProp.OEM_kg)/Vehicle.MassProp.MTOM_kg;
+%
+%     % calculate MTOM increment for next iteration
+%     % NEWTON METHOD
+%     if MassIter > 1
+%
+%         % calculate the partial derivative, i.e., the change in excess
+%         % energy mass per unit change in MTOM
+%         dfdx = (ExcessEnergyMass_kg - OldExcessEnergyMass_kg) / (MTOM_kg - OldMTOM_kg);
+%         % Cap the partial derivative's minimum value to prevent a very
+%         % large growth factor from being applied
+%         % Note: Growth factor = 1 / dfdx
+%         %                 dfdx(dfdx>1) = 1;
+%         %                 dfdx(dfdx<0) = 1;
+%         dfdx(dfdx<(1/GrowthFactorCap)) = (1/GrowthFactorCap);
+%
+%
+%         % calculate the mass delta to be applied
+%         dMass_kg = - MassRelaxationFactor * ExcessEnergyMass_kg/dfdx;
+%
+%         dMass_kg = sign(dMass_kg) * min(abs(dMass_kg), 0.1*MTOM_kg);
+%
+%         GrowthFactor = 1/dfdx;
+%
+%     end
+%
+%
+%     %%%%%%%%%%% Mass iteration convergence criteria
+%     % 1. delta in MTOM between successive iterations < threshold
+%     % 2. delta in individual energy source excess masses < threshold
+%     if(abs(dMass_kg)<MassConvergenceThreshold_kg && all(abs(DeltaEnergyMass_kg)<MassConvergenceThreshold_kg))
+%         MassConvergence = 1;
+%     else
+%         % Update the MTOM for the next iteration
+%         if MaintainSetMTOM == 0
+%             Vehicle.MassProp.MTOM_kg = Vehicle.MassProp.MTOM_kg +  dMass_kg;
+%             % relegate this iteration's excess energy mass and MTOM
+%             % to "old" quantities to be used in next iteration
+%             OldExcessEnergyMass_kg = ExcessEnergyMass_kg;
+%             OldMTOM_kg = MTOM_kg;
+%         end
+%     end
+% end

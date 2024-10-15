@@ -1,0 +1,56 @@
+
+Test-clarky.mat                                 
+
+   2       ! Nblades
+
+   0.4959  5.4321    ! CL0    CL_a 
+  -0.0676  1.4819    ! CLmin  CLmax
+
+   0.00730  0.06350  0.00960  0.6879    ! CD0    CD2u  CD2l  CLCD0
+  1230000.0  -0.500            ! REref  REexp
+
+   1.0000  1.0000  1.0000   !  Rfac   Cfac   Bfac
+   0.0000  0.0000  0.0000   !  Radd   Cadd   Badd
+
+#        r            c        beta
+   0.43250E-01          NaN      NaN
+   0.49750E-01          NaN      NaN
+   0.56250E-01          NaN      NaN
+   0.62750E-01          NaN      NaN
+   0.69250E-01          NaN      NaN
+   0.75750E-01          NaN      NaN
+   0.82250E-01          NaN      NaN
+   0.88750E-01          NaN      NaN
+   0.95250E-01          NaN      NaN
+   0.10175              NaN      NaN
+   0.10825              NaN      NaN
+   0.11475              NaN      NaN
+   0.12125              NaN      NaN
+   0.12775              NaN      NaN
+   0.13425              NaN      NaN
+   0.14075              NaN      NaN
+   0.14725              NaN      NaN
+   0.15375              NaN      NaN
+   0.16025              NaN      NaN
+   0.16675              NaN      NaN
+   0.17325              NaN      NaN
+   0.17975              NaN      NaN
+   0.18625              NaN      NaN
+   0.19275              NaN      NaN
+   0.19925              NaN      NaN
+   0.20575              NaN      NaN
+   0.21225              NaN      NaN
+   0.21875              NaN      NaN
+   0.22525              NaN      NaN
+   0.23175              NaN      NaN
+   0.23825              NaN      NaN
+   0.24475              NaN      NaN
+   0.25125              NaN      NaN
+   0.25775              NaN      NaN
+   0.26425              NaN      NaN
+   0.27075              NaN      NaN
+   0.27725              NaN      NaN
+   0.28375              NaN      NaN
+   0.29025              NaN      NaN
+   0.29675              NaN      NaN
+   0.30000       0.0000          NaN

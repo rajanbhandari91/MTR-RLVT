@@ -1,0 +1,24 @@
+Test-XFOIL_NACA2412_Re_13.10_M_0.28
+
+2       ! Nblades
+
+0.2576  6.6928    ! CL0    CL_a
+-0.2080  1.5289    ! CLmin  CLmax
+
+0.0056  0.0267  0.0052  0.4038  ! CD0    CD2u   CD2l  CLCD0
+1309638.0  -0.5000               ! REref  REexp
+
+0.0 0.5 1.0       ! XIdes (r/R locations where design cl is specified)
+0.6 0.5 0.4       ! CLdes   (specified cl)
+
+0.10    !  hub radius(m)
+0.91    !  tip radius(m)
+87.46    !  speed(m/s)
+2700.00   !  rpm 
+
+0.0      !  Thrust(N)   ( 0 if power  specified )
+149140.0      !  Power(W)    ( 0 if thrust specified )
+
+0.0   0.0   ! Ldes    KQdes
+
+30       ! Nout    number of output stations (optional)
