@@ -1,4 +1,4 @@
-function [W_VT_lb] = EvalVTWEIGHT(nVT, Sv, bv, lam25v, TOCv, TRv, Wing_5_Hv, trv, Av,q,Wdg,nult,WTO)
+function [W_VT_lb] = EvalVTWEIGHT(nVT, Sv, bv, lam25v, TOCv, TRv, Wing_5_Hv, trv, Av,q,Wdg,nult,WTO,Tfvt,VD)
         % Reviewed 11/19/21 2042 hrs
 
         %% Nomenclature
@@ -30,6 +30,9 @@ function [W_VT_lb] = EvalVTWEIGHT(nVT, Sv, bv, lam25v, TOCv, TRv, Wing_5_Hv, trv
             (nult * Wdg)^0.376* q^0.122 * Sv^0.873 *...
             (100*TOCv/cosd(lam25v))^(-0.49) *...
             (Av/(cosd(lam25v))^2)^0.357 * TRv^0.039;
+
+        % 4.  Johnson method, TP-2015 page 230 with error~16.7%
+        W_VT(3) = Tfvt*Sv*(0.00395* (Sv^0.2) * VD - 0.4885);
 
         W_VT_lb = mean(W_VT);
 

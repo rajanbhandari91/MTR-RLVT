@@ -1,4 +1,4 @@
-function W_HTail_lb = EvalHTailWeight_lb(WTO,nult,Sh,lh,bh, MaxRootThickness,Wdg,q,TOCh,Ah,lam25h,TRh)
+function W_HTail_lb = EvalHTailWeight_lb(WTO,nult,Sh,lh,bh, MaxRootThickness,Wdg,q,TOCh,Ah,lam25h,TRh,Tfht,VD)
  
 % Reviewed: Nov 19, 2021
 
@@ -29,6 +29,9 @@ function W_HTail_lb = EvalHTailWeight_lb(WTO,nult,Sh,lh,bh, MaxRootThickness,Wdg
     W_HTAIL(3) = 0.016* ((nult*Wdg)^0.414)*...
         (q^0.168)*(Sh^0.896) * ((100*TOCh/cosd(lam25h))^(-0.12))...
         *((Ah/(cosd(lam25h))^2)^0.043)*(TRh^(-0.02));
+
+      % 4.  Johnson method, TP-2015 page 230 with error~16.7% 
+    W_HTAIL(4) = Tfht*Sh*(0.00395* (Sh^0.2) * VD - 0.4885);
     
     %  lb/ft2 check for testing: 
 %     W_HTAIL/Sh
