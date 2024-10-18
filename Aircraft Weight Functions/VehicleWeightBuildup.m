@@ -102,9 +102,10 @@ while OEM_conv==0 && iter<iter_max
 
     HTRootThickness = TOCh * Vehicle.Geom.RHTail.Stn.c(1) * Conv_m_to_ft;    % max thickness of root in ft - computed
     Ah = bh^2/Sh;                                                           % horizontal tail aspect ratio, computed
+    Tfht=1;                                                                    % horizontal tail technology factors, assume 1
 
     % evaluate HTail weight in lb
-    W_HTAIL_lb = EvalHTailWeight_lb(WTO,nult,Sh,lhtail,bh,HTRootThickness,W_dg,q,TOCh,Ah,lam25h,TRh);
+    W_HTAIL_lb = EvalHTailWeight_lb(WTO,nult,Sh,lhtail,bh,HTRootThickness,W_dg,q,TOCh,Ah,lam25h,TRh,Tfht,VD);
     Geom.RHTail.Mass = W_HTAIL_lb/2*Conv_lb_to_kg;
     Geom.LHTail.Mass = W_HTAIL_lb/2*Conv_lb_to_kg;
 
@@ -121,8 +122,9 @@ while OEM_conv==0 && iter<iter_max
     
     VTRootThickness = TOCv * Vehicle.Geom.VTail.Stn.c(1) * Conv_m_to_ft;  % max thickness at root in ft - computed
     Av = bv^2/Sv;                                                           % vertical tail aspect ratio - computed
-    
-    [W_VT_lb] = EvalVTWEIGHT(nVT, Sv, bv, lam25v, TOCv, TRv, Ht_Hv, VTRootThickness, Av,q,W_dg,nult,WTO);
+    Tfvt=1;                                                                    % vertical tail technology factors, assume 1
+
+    [W_VT_lb] = EvalVTWEIGHT(nVT, Sv, bv, lam25v, TOCv, TRv, Ht_Hv, VTRootThickness, Av,q,W_dg,nult,WTO,Tfvt,VD);
     
     % assign this WEIGHT to VT
     Geom.VTail.Mass = W_VT_lb * Conv_lb_to_kg;
