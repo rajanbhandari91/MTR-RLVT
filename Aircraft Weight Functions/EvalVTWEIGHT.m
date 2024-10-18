@@ -14,6 +14,8 @@ function [W_VT_lb] = EvalVTWEIGHT(nVT, Sv, bv, lam25v, TOCv, TRv, Wing_5_Hv, trv
         % Wdg = Flight design Gross Weight (We usually use WTO)
         % nult = Ultimate Load factor
         % WTO = Takeoff Gross Weight
+        % Tfvt = technology factors vertical tail
+        % VD = Design dive speed
 
 
         %%% VERTICAL TAIL WEIGHT

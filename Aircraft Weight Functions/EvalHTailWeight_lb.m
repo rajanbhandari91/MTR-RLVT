@@ -15,6 +15,8 @@ function W_HTail_lb = EvalHTailWeight_lb(WTO,nult,Sh,lh,bh, MaxRootThickness,Wdg
 % lam25h: quarter chord sweep
 % Ah: aspect ratio
 % TRh: taper ratio
+% Tfht: technology factors horizontal tail
+% VD: design dive speed
 
     % 1. Cessna method - Roskam rpg 1519
     % W_HTAIL(1) = 3.184 * (WTO^0.887) * (Sh^0.101) * (Ah^0.138) / (57.5 * MaxRootThickness^0.223) ;
