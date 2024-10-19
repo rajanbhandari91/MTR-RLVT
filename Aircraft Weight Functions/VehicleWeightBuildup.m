@@ -72,22 +72,77 @@ while OEM_conv==0 && iter<iter_max
 
 
     %% Wing Weight
-    S_ft2 = Vehicle.Recalcs.WingArea_TOT_m2 * Conv_m_to_ft^2;               % wing planform area, ft2
-    b_ft = Vehicle.Recalcs.WingSpan_m * Conv_m_to_ft;                       % wing span, ft
-    AR = 2*Vehicle.Geom.RWing.AspectRatio;                                                      % aspect ratio
-    TR = Geom.RWing.TaperDefn(end);                                         % wing taper ratio
-    lam25 = mean(Geom.RWing.Stn.Sw_25);                                     % quarter-chord sweep
-    lam50 = mean(Geom.RWing.Stn.Sw_50);                                     % Mid-Chord Sweep
-    TOCmax = Geom.RWing.Thickness_to_chord;
     
-    RootThickness_ft = TOCmax * Vehicle.Geom.RWing.Stn.c(1) * Conv_m_to_ft; % max thickness of wing root in ft
-    
-    [Main_Wings_lb] = EvalWingWEIGHT(S_ft2,b_ft,TR,AR,TOCmax,...
-        lam25,lam50,RootThickness_ft,W_dg,q,0,VmaxSLkt,nult,WTO);
+    %%%% Pack Inputs %%%%
+
+    X(1); % width of wing structural attachements to body {m}
+    X(2); % pylon radius of gyration {m}
+    X(3); % maximum thrust of one rotor {N}
+    X(4); % rotor speed for wing weight design condition {rad/sec}
+
+    X(5) = Vehicle.MassProp.MTOM_kg * 9.81; % structural design gross weight {N}
+    X(6); % tip mass at end of wing {kg}
+
+    X(7); % wing torsion mode frequency (fraction rotor speed) {per rev}
+    X(8); % wing beam bending mode frequency (fraction rotor speed) {per rev}
+    X(9); % wing chord bending mode frequency (fraction rotor speed) {per rev}
+
+    X(10); % unit weight of leading and trailing edge fairings {kg/m^2}
+    X(11); % unit weight of control surfaces {kg/m^2}
+    X(12); % unit weight of wing extenstion {kg/m^2}
+
+    X(13) = sum(Vehicle.Geom.LWing.CS_Area); % area of control surfaces {m^2}
+    X(14); % area of wing extensions {m^2}
+    X(15) = Vehicle.Geom.LWing.PlanformArea; % wing planform area {m^2}
+    X(16) = Vehicle.Geom.LWing.AspectRatio; % wing aspect ratio
+    X(17); % wing sweep angle {deg}
+    X(18); % wing taper ratio
+    X(19) = Vehicle.Geom.LWing.Span; % wing span (length of torque box) {m}
+    X(20) = Vehicle.Geom.LWing.MAC; % wing chord {m}
+    X(21); % fraction of wing span that folds (0 to 1)
+    X(22) = Vehicle.Geom.LWing.ExposedSpan; % wing length (minus fuselage width) {m}
+    X(23) = Vehicle.Geom.LWing.Thickness_to_chord; % wing airfoil thickness-to-chord ratio
+    X(24); % torque box chord to wing chord ratio
+    X(25); % design ultimate flight load factor at W_SD {g}
+
+    X(26); % torque box modulus {N/m^2}
+    X(27); % spar modulus {N/m^2}
+
+    X(28); % ultimate strain allowable (min of spar and torque box)
+    X(29); % torque box shear modulus {N/m^2}
+
+    X(30); % structural efficiency factor (torque box)
+    X(31); % structural efficiency factor (spars)
+
+    X(31); % density of torque box material {kg/m^3}
+    X(32); % density of spar material {kg/m^3}
+
+    X(33); % strength correction for spar taper (equivelant stiffness)
+    X(34); % weight correction for spar taper (equivelant strength)
+    X(35); % weight correction for spar taper (equivalent siffness)
+
+    X(36); % wing fittings and brackets (fraction maximum thrust of one rotor)
+    X(37); % wing fold/tilt (fraction total weight excluding fold, including weight on tips)
+    X(38); % wing extension fold/tilt (fraction extenstion weight)
+
+    X(39) = 1; % X_prim
+    X(40) = 1; % X_flap
+    X(41) = 1; % X_fair
+    X(42) = 1; % X_fit
+    X(43) = 1; % X_fold
+    X(44) = 1; % X_efold
+    X(45) = 1; % X_ext
+
+    X(46) = 0; % 1 for tilt rotor or tiltwing 0 for fixed
+    X(47) = 0; % 1 for jump takeoff reqiurement 0 for else
+    X(48) = 0; % 0 for landing gear on wing 1 for otherwise
+
+
+    [Main_Wings_kg] = EvalWingWEIGHT(X);
 
     % dividing this mass by 2, and assign to left and right wings
-    Geom.LWing.Mass = Main_Wings_lb * Conv_lb_to_kg / 2;
-    Geom.RWing.Mass = Main_Wings_lb * Conv_lb_to_kg / 2;
+    Geom.LWing.Mass = Main_Wings_kg / 2;
+    Geom.RWing.Mass = Main_Wings_kg / 2;
 
     %% Horizontal Tail Weight
     Sh = 2*Vehicle.Geom.RHTail.PlanformArea * Conv_m_to_ft^2;                        % horizontal tail area, ft2
