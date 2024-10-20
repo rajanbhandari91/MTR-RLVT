@@ -244,35 +244,77 @@ while OEM_conv==0 && iter<iter_max
     Geom.Pylons_1.ML_kgm = Geom.Pylons_1.Mass/(0.5*L_OBD_Boom_len);
     Geom.Pylons_2.ML_kgm = Geom.Pylons_2.Mass/(0.5*L_OBD_Boom_len);
     
-    %% Landing Gear Weight
-    Lm = Vehicle.Geom.LandingGear_Main_1.BellyGroundClearance * Conv_m_to_inch;                       % main gear shock strut length, conv to inch
-    Ln = Vehicle.Geom.LandingGear_Nose.BellyGroundClearance * Conv_m_to_inch;                       % nose gear shock strut length, conv to inch
-    nMLDG = 2;
-    nNLDG = 1;
-    [W_LG_lb, W_MLDG_each_lb, W_NLDG_each_lb] = EvalLDGWeight_lb(nult,Wldg,Lm,Ln,nMLDG,nNLDG);
+    %% Landing Gear Weight %%
 
-    Geom.LandingGear_Main_1.Mass = W_MLDG_each_lb * Conv_lb_to_kg;
-    Geom.LandingGear_Main_2.Mass = W_MLDG_each_lb * Conv_lb_to_kg;
-    Geom.LandingGear_Nose.Mass   = W_NLDG_each_lb * Conv_lb_to_kg;
+    %%%% Pack Inputs %%%%
 
-    %% Nacelle Weight
-    % Nacelle 1 and 4 Weight
-    N_Lt = Geom.Nacelle_1.Length * Conv_m_to_ft;
-    N_w = (Geom.Nacelle_1.MaxWidth) * Conv_m_to_ft;
-    S_n = Geom.Nacelle_1.Stn.sdA_Wet(end) * Conv_m2_to_ft2;
-    Nac_W_lb = EvalFusWeight_lb(WTO,nult,N_Lt,N_w,N_w,VC,S_n,W_dg,lh,q);
-    Geom.Nacelle_1.Mass = 1.2*Nac_W_lb * Conv_lb_to_kg;                     % 1.2 factor for tilting mechanism
-    Geom.Nacelle_4.Mass = 1.2*Nac_W_lb * Conv_lb_to_kg;
+    LG_Pack(1)  = Vehicle.MassProp.MTOM_kg * Conv_kg_to_lb; % maximum takeoff weight {lb}
+    LG_Pack(2)  = Vehicle.DesignPoint.WL_kgm2 * Conv_kg_to_lb / Conv_m2_to_ft2; % wing loading (1.0 for helicopter) {lb/ft^2}
+    LG_Pack(3)  = 3; % number of landing gear assemblies
+
+    LG_Pack(6)  = 0.0325; % landing gear weight (fraction maximum takeoff weight)
+    LG_Pack(7)  = 0.08;   % retraction weight (fraction basic landing gear weight)
+    LG_Pack(8)  = 0.14;   % crashworthiness weight (fraction basic landing gear weight)
+
+    LG_Pack(9)  = 1; % landing gear factor (0 if landing gear not present, else 1)
+    LG_Pack(10) = 0; % retraction factor (0 if gear is fixed, else 1)
+    LG_Pack(11) = 0; % crashworthiness factor (0 if gear is not rated for crash, else 1)
+
+    [~, W_LDG_each_lb] = EvalLDGWeight_lb(LG_Pack);
     
-    % Nacelle 2, 3, 5, and 6 Weight
-    N_Lt = Geom.Nacelle_2.Length * Conv_m_to_ft;
-    N_w = (Geom.Nacelle_2.MaxWidth) * Conv_m_to_ft;
-    S_n = Geom.Nacelle_2.Stn.sdA_Wet(end) * Conv_m2_to_ft2;
-    Nac_W_lb = EvalFusWeight_lb(WTO,nult,N_Lt,N_w,N_w,VC,S_n,W_dg,lh,q);
-    Geom.Nacelle_2.Mass = 1.2*Nac_W_lb * Conv_lb_to_kg;                     % 1.2 factor for tilting mechanism
-    Geom.Nacelle_3.Mass = 1.2*Nac_W_lb * Conv_lb_to_kg;
-    Geom.Nacelle_5.Mass = Nac_W_lb * Conv_lb_to_kg;                     
-    Geom.Nacelle_6.Mass = Nac_W_lb * Conv_lb_to_kg;
+    Geom.LandingGear_Main_1.Mass = W_LDG_each_lb * Conv_lb_to_kg; % NDARC method does not differentiate between nose and main gear.
+    Geom.LandingGear_Main_2.Mass = W_LDG_each_lb * Conv_lb_to_kg; % This could lead to innacuracies in the weight distribution
+    Geom.LandingGear_Nose.Mass   = W_LDG_each_lb * Conv_lb_to_kg; % as calculated here.
+
+    %% Nacelle Weight %%
+
+    %%%% Outboard Nacelle Weight %%%%
+    % Nacelles 1 and 4
+
+    %%%% Pack Inputs %%%%
+    
+    NacelleOutPack(1)  = Vehicle.MassProp.MTOM_kg * Conv_kg_to_lb; % maximum takeoff weight {lb}
+    NacelleOutPack(2)  = Vehicle.Geom.Turboshaft.Mass * Conv_kg_to_lb; % weight all main enignes {lb}
+    NacelleOutPack(3)  = 1; % number of main engines
+    NacelleOutPack(4)  = Geom.Nacelle_1.Stn.sdA_Wet(end) * Conv_m2_to_ft2; % wetted area of nacelles and pylons (less spinner) {ft^2}
+
+    NacelleOutPack(5)  = 0.3;  % air induction weight (fraction nacelle plus air induction) (range: 0.1-0.6)
+    NacelleOutPack(6)  = .005; % pylon support structure weight (fraction W_MTO)
+
+    NacelleOutPack(7)  = 1; % engine support factor (1 if supports present, else 0)
+    NacelleOutPack(8)  = 1; % engine cowl factor (1 of cowl present, else 0)
+    NacelleOutPack(9)  = 1; % pylon support structure factor (1 if pylon present, else 0)
+    NacelleOutPack(10) = 1; % air induction factor (1 if air induction system present, else 0)
+
+    [W_nacelle_out, W_airind_out] = EvalNacelleWeight(NacelleOutPack);
+
+    Geom.Naccelle_1.Mass = (W_nacelle_out + W_airind_out) * Conv_lb_to_kg;
+    Geom.Naccelle_4.Mass = (W_nacelle_out + W_airind_out) * Conv_lb_to_kg;
+
+    %%%% Inboard Nacelle Weight %%%%
+    % Nacelles 2, 3, 5, and 6
+
+    %%%% Pack Inputs %%%%
+    
+    NacelleInPack(1)  = Vehicle.MassProp.MTOM_kg * Conv_kg_to_lb; % maximum takeoff weight {lb}
+    NacelleInPack(2)  = Vehicle.Geom.Turboshaft.Mass * Conv_kg_to_lb; % weight all main enignes {lb}
+    NacelleInPack(3)  = 1; % number of main engines
+    NacelleInPack(4)  = Geom.Nacelle_2.Stn.sdA_Wet(end) * Conv_m2_to_ft2; % wetted area of nacelles and pylons (less spinner) {ft^2}
+
+    NacelleInPack(5)  = 0.3;  % air induction weight (fraction nacelle plus air induction) (range: 0.1-0.6)
+    NacelleInPack(6)  = .005; % pylon support structure weight (fraction W_MTO)     <<<TEST VALUE NEEDS CHECK>>>
+
+    NacelleInPack(7)  = 1; % engine support factor (1 if supports present, else 0)
+    NacelleInPack(8)  = 1; % engine cowl factor (1 of cowl present, else 0)
+    NacelleInPack(9)  = 1; % pylon support structure factor (1 if pylon present, else 0)
+    NacelleInPack(10) = 1; % air induction factor (1 if air induction system present, else 0)
+
+    [W_nacelle_in, W_airind_in] = EvalNacelleWeight(NacelleInPack);
+
+    Geom.Naccelle_2.Mass = (W_nacelle_in + W_airind_in) * Conv_lb_to_kg;
+    Geom.Naccelle_3.Mass = (W_nacelle_in + W_airind_in) * Conv_lb_to_kg;
+    Geom.Naccelle_5.Mass = (W_nacelle_in + W_airind_in) * Conv_lb_to_kg;
+    Geom.Naccelle_6.Mass = (W_nacelle_in + W_airind_in) * Conv_lb_to_kg;
     
     %% Rotor Weight [2]
     KW = Vehicle.Propulsion.Rotor_K_W;                                      % Blade Material Coefficient
