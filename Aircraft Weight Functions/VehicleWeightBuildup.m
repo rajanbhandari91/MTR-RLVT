@@ -325,22 +325,41 @@ while OEM_conv==0 && iter<iter_max
     SHP = (Vehicle.Propulsion.LiftMotorPower_Each_kW)*Conv_kW_to_hp;        % Shaft Horsepower [hp]
     M = 0;                                                                  % Design Mach Number
     
-    Rotor_W_lb = PropWeight(KW,D_ft,B,AF,N,SHP,M);
+    %%%% Pack Inputs %%%%
+
+    LiftPropPack(1) = Vehicle.Propulsion.NLiftProps; % number of auxillary thrusters
+    LiftPropPack(2) = 1; % thrust per propellor {lb}
+    LiftPropPack(3) = (Vehicle.Propulsion.LiftMotorPower_Each_kW)*Conv_kW_to_hp; % power per propellor {hp}
+    LiftPropPack(4) = pi * (Vehicle.Geom.Prop_5.Diam * Conv_m_to_ft / 2)^2 ; % auxiliary thruster disk area {ft^2}
+    LiftPropPack(5) = Vehicle.Propulsion.CPSetup.nBlades; % number of blades per propellor
+    LiftPropPack(6) = max(Vehicle.PointPerf.Results{Vehicle.Tracker.MassIter}.LPRPM); % propellor rotation sped at P_at {rpm}
+    LiftPropPack(7) = Vehicle.Geom.Prop_5.Diam *Conv_m_to_ft; % propellor diameter {ft}
+    LiftPropPack(8) = 1; % material factor (composite = 1, wood = 1.2, aluminum spar = 1.31, aluminum construction = 1.44)
+
+    LiftPropPack(9) = 1; % auxillary propulsion/propellor factor (1 if present, else 0)
+
+    Rotor_W_lb = PropWeight(LiftPropPack);
    
     Geom.Prop_5.Mass = Rotor_W_lb*Conv_lb_to_kg;
     Geom.Prop_6.Mass = Rotor_W_lb*Conv_lb_to_kg;
    
     
     %% Prop Weight [4]
-    KW = Vehicle.Propulsion.Cruise_K_W;                                     % Blade Material Coefficient
-    D_ft = Vehicle.Geom.Prop_1.Diam *Conv_m_to_ft;                          % Blade Diameter
-    B = Vehicle.Propulsion.CPSetup.nBlades;                                % Number of Blades
-    AF = Vehicle.Propulsion.CruiseBladeAF;                                   % Blade Activity Factor
-    N = max(Vehicle.PointPerf.Results{Vehicle.Tracker.MassIter}.MPRPM);                                    % Blade RPM
-    SHP = (Vehicle.Propulsion.CruisePropPower_kW)*Conv_kW_to_hp;            % Shaft Horsepower [hp]
-    M = 0;                                                                  % Design Mach Number
     
-    Prop_W_lb = PropWeight(KW,D_ft,B,AF,N,SHP,M);
+    %%%% Pack Inputs %%%%
+
+    CruisePropPack(1) = Vehicle.Propulsion.NCruiseProps; % number of auxillary thrusters
+    CruisePropPack(2) = 1; % thrust per propellor {lb}
+    CruisePropPack(3) = (Vehicle.Propulsion.CruisePropPower_kW)*Conv_kW_to_hp; % power per propellor {hp}
+    CruisePropPack(4) = pi * (Vehicle.Geom.Prop_1.Diam * Conv_m_to_ft / 2)^2 ; % auxiliary thruster disk area {ft^2}
+    CruisePropPack(5) = Vehicle.Propulsion.CPSetup.nBlades; % number of blades per propellor
+    CruisePropPack(6) = max(Vehicle.PointPerf.Results{Vehicle.Tracker.MassIter}.MPRPM); % propellor rotation sped at P_at {rpm}
+    CruisePropPack(7) = Vehicle.Geom.Prop_1.Diam *Conv_m_to_ft; % propellor diameter {ft}
+    CruisePropPack(8) = 1; % material factor (composite = 1, wood = 1.2, aluminum spar = 1.31, aluminum construction = 1.44)
+
+    CruisePropPack(9) = 1; % auxillary propulsion/propellor factor (1 if present, else 0)
+
+    Prop_W_lb = PropWeight(CruisePropPack);
 
     Geom.Prop_1.Mass = Prop_W_lb*Conv_lb_to_kg;
     Geom.Prop_2.Mass = Prop_W_lb*Conv_lb_to_kg;
